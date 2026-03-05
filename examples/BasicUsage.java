@@ -96,7 +96,13 @@ public class BasicUsage {
         System.out.println("任务名称: " + TASK_NAME);
         System.out.println("==================================================");
 
-        new BasicUsage().run();
+        BasicUsage example = new BasicUsage();
+
+        // 运行完整仿真流程
+        // example.run();
+
+        // 运行获取仿真结果测试用例
+        example.testFetchTaskResults();
     }
 
     /**
@@ -307,5 +313,93 @@ public class BasicUsage {
             }
             System.out.println("==================================================");
         }
+    }
+
+    /**
+     * 测试用例：获取仿真结果
+     * <p>
+     * 测试场景：
+     * 1. LaWan00000016 (stop状态) - 任务已停止，应能获取结果
+     * 2. LaWan00000013 (finished状态) - 任务已完成，应能获取结果
+     * 3. LaWan00000099 (不存在) - 任务不存在，应返回404错误
+     */
+    public void testFetchTaskResults() {
+        System.out.println("\n==================================================");
+        System.out.println("测试用例：获取仿真结果 (fetchTaskResult)");
+        System.out.println("==================================================");
+
+        // 测试任务列表：[任务ID, 预期状态, 预期结果]
+        String[][] testCases = {
+            {"LaWan00000016", "stop", "应成功获取结果（任务已停止）"},
+            {"LaWan00000013", "finished", "应成功获取结果（任务已完成）"},
+            {"LaWan00000099", "not_exist", "应返回404错误（任务不存在）"}
+        };
+
+        try {
+            AidClient client = new AidClient(CONFIG_PATH);
+            String outputDir = "./test_results/";
+
+            // 确保输出目录存在
+            File dir = new File(outputDir);
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
+
+            for (String[] testCase : testCases) {
+                String taskId = testCase[0];
+                String expectedStatus = testCase[1];
+                String description = testCase[2];
+
+                System.out.println("\n----------------------------------------");
+                System.out.println("测试任务: " + taskId);
+                System.out.println("预期状态: " + expectedStatus);
+                System.out.println("测试目的: " + description);
+                System.out.println("----------------------------------------");
+
+                try {
+                    AidResponse<TaskResultResponse> result = client.fetchTaskResult(taskId, outputDir);
+
+                    if (result.isSuccess() && result.getData() != null) {
+                        TaskResultResponse resp = result.getData();
+                        System.out.println("✓ 获取结果成功");
+                        System.out.println("  响应码: " + result.getCode());
+                        System.out.println("  消息: " + result.getMessage());
+                        System.out.println("  结果文件路径: " + resp.getResultFilePath());
+
+                        // 验证文件是否存在
+                        File resultFile = new File(resp.getResultFilePath());
+                        if (resultFile.exists()) {
+                            System.out.println("  文件大小: " + resultFile.length() + " bytes");
+                        } else {
+                            System.out.println("  ⚠ 警告：结果文件不存在于本地");
+                        }
+                    } else {
+                        System.out.println("✗ 获取结果失败");
+                        System.out.println("  响应码: " + result.getCode());
+                        System.out.println("  消息: " + result.getMessage());
+
+                        // 检查是否是预期的错误
+                        if ("not_exist".equals(expectedStatus) && result.getCode() == 404) {
+                            System.out.println("  ✓ 符合预期：任务不存在返回404");
+                        }
+                    }
+
+                } catch (AidException e) {
+                    System.out.println("✗ SDK 异常 [code=" + e.getErrorCode() + "]: " + e.getErrorMessage());
+                    if ("not_exist".equals(expectedStatus) && e.getErrorCode() == 404) {
+                        System.out.println("  ✓ 符合预期：任务不存在返回404");
+                    }
+                } catch (Exception e) {
+                    System.out.println("✗ 异常 [" + e.getClass().getSimpleName() + "]: " + e.getMessage());
+                }
+            }
+
+        } catch (Exception e) {
+            System.err.println("\n✗ 初始化失败: " + e.getMessage());
+        }
+
+        System.out.println("\n==================================================");
+        System.out.println("测试用例执行结束");
+        System.out.println("==================================================");
     }
 }
