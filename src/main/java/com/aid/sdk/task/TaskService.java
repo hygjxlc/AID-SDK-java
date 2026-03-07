@@ -328,8 +328,8 @@ public class TaskService {
                 throw new IOException("创建输出目录失败: " + outputDir.getAbsolutePath());
             }
 
-            // 约定统一文件名
-            File outputFile = new File(outputDir, "result.zip");
+            // 结果文件命名规则：{taskId}result.stp
+            File outputFile = new File(outputDir, taskId + "result.stp");
             try (FileOutputStream fos = new FileOutputStream(outputFile)) {
                 fos.write(fileBytes);
             }
