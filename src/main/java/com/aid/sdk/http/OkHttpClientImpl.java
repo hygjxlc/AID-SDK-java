@@ -228,6 +228,26 @@ public class OkHttpClientImpl implements HttpClient {
                     throw new AidException(ErrorCode.RESULT_FETCH_FAILED, "响应体为空，文件下载失败");
                 }
 
+                // If server returns JSON (error response with HTTP 200), parse and throw
+                String contentType = responseBody.contentType() != null
+                        ? responseBody.contentType().toString() : "";
+                if (contentType.contains("application/json")) {
+                    String jsonStr = responseBody.string();
+                    try {
+                        com.fasterxml.jackson.databind.JsonNode node =
+                                objectMapper.readTree(jsonStr);
+                        int code = node.has("code") ? node.get("code").asInt() : -1;
+                        String message = node.has("message") ? node.get("message").asText() : jsonStr;
+                        throw new AidException(ErrorCode.RESULT_FETCH_FAILED,
+                                "服务端拒绝下载 (code=" + code + "): " + message);
+                    } catch (AidException ae) {
+                        throw ae;
+                    } catch (Exception ignore) {
+                        throw new AidException(ErrorCode.RESULT_FETCH_FAILED,
+                                "服务端返回异常JSON: " + jsonStr);
+                    }
+                }
+
                 byte[] bytes = responseBody.bytes();
                 AidLogger.info(API_PREFIX + ".download", null,
                         "文件下载成功，字节数=" + bytes.length);
