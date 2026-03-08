@@ -4,12 +4,12 @@
 
 1. [环境要求](#1-环境要求)
 2. [目录结构](#2-目录结构)
-3. [安装步骤](#3-安装步骤)
+3. [快速开始（普通用户）](#3-快速开始普通用户)
 4. [配置文件说明](#4-配置文件说明)
 5. [日志配置](#5-日志配置)
-6. [构建与运行](#6-构建与运行)
+6. [CLI 命令使用](#6-cli-命令使用)
 7. [完整调用示例](#7-完整调用示例)
-8. [常见问题](#8-常见问题)
+
 
 ---
 
@@ -52,49 +52,56 @@ aid-client-sdk-java/
 │   └── aid-client-sdk-1.0.0.jar # 构建产物（Fat JAR）
 ├── logs/                         # 日志目录（运行时自动创建）
 │   └── aid-sdk-YYYY-MM-DD.log
+├── cli_start.bat                 # Windows CLI 启动脚本
+├── cli_start.sh                  # Linux/macOS CLI 启动脚本
 └── pom.xml                       # Maven 依赖配置
 ```
 
 ---
 
-## 3. 安装步骤
+## 3. 快速开始（普通用户）
 
-### 3.1 克隆代码
+> 如果您只需要**使用 CLI 工具**调用仿真服务，按以下步骤操作即可，**无需安装 Maven，无需编译源码**。
+
+### 3.1 解压安装包
+
+将 `aid-client-sdk-1.0.0.zip` 解压到任意目录：
+
+```
+aid-client-sdk-java/
+├── aid-client-sdk-1.0.0.jar   ← 已包含所有依赖，直接运行
+├── config/config.properties   ← 配置服务器地址和密钥
+├── cli_start.bat              ← Windows 启动脚本
+├── cli_start.sh               ← Linux/macOS 启动脚本
+└── examples/                  ← 示例数据和代码（参考）
+```
+
+### 3.2 确认 Java 环境
+
+只需安装 **JDK 1.8（Java 8）** 或对应 JRE：
 
 ```bash
-git clone <仓库地址>
-cd aid-client-sdk-java
+java -version
+# 期望输出：java version "1.8.x_xxx"
 ```
 
-### 3.2 安装 Maven（Windows）
+> **重要**：必须使用 Java 8，Java 11+ 会导致日志库兼容性错误（`UnsupportedClassVersionError`）。
 
-若未安装 Maven，从官网下载后配置环境变量，或使用以下命令下载到用户目录（推荐，避免 C:\ 权限问题）：
+### 3.3 修改配置文件
 
-```powershell
-# 下载并解压到用户目录
-$url = "https://archive.apache.org/dist/maven/maven-3/3.9.6/binaries/apache-maven-3.9.6-bin.zip"
-Invoke-WebRequest -Uri $url -OutFile "$env:USERPROFILE\maven.zip"
-Expand-Archive -Path "$env:USERPROFILE\maven.zip" -DestinationPath "$env:USERPROFILE\"
+编辑 `config/config.properties`，填写服务器地址和认证密钥（详见 [第 4 章](#4-配置文件说明)）。
 
-# 配置环境变量（当前会话有效）
-$env:MAVEN_HOME = "$env:USERPROFILE\apache-maven-3.9.6"
-$env:PATH = "$env:MAVEN_HOME\bin;$env:PATH"
+### 3.4 运行 CLI
+
+```bash
+# Windows（双击或命令行运行）
+cli_start.bat
+
+# Linux / macOS
+./cli_start.sh
 ```
 
-### 3.3 主要依赖说明
-
-依赖版本已在 `pom.xml` 中锁定，适配 JDK 1.8：
-
-| 依赖 | 版本 | 说明 |
-|-----|-----|------|
-| OkHttp | 4.9.3 | HTTP 客户端 |
-| Jackson | 2.15.2 | JSON 序列化/反序列化 |
-| Commons-CLI | 1.5.0 | 命令行参数解析 |
-| SLF4J | **1.7.36** | 日志门面（JDK 1.8 兼容版本） |
-| Logback | **1.2.13** | 日志实现（JDK 1.8 兼容版本） |
-| logstash-logback-encoder | **6.6** | JSON 格式日志（JDK 1.8 兼容版本） |
-
-> **注意**：SLF4J 2.x、Logback 1.4.x、logstash 7.x 均要求 Java 11+，在 JDK 1.8 上会报错，已降级至以上版本。
+不带参数运行可查看所有可用命令和示例。
 
 ---
 
@@ -106,7 +113,7 @@ $env:PATH = "$env:MAVEN_HOME\bin;$env:PATH"
 # AID Client SDK Configuration
 
 # 后端服务基础URL（必填）
-baseURL=http://127.0.0.1:8080/api/v1
+baseURL=http://111.228.12.67:28090/api/v1
 
 # API认证Token（必填，须与服务端 app_config.yaml 中的 api_key 一致）
 api_token=11111111
@@ -116,18 +123,18 @@ api_token=11111111
 
 | 字段 | 说明 | 示例 |
 |-----|------|------|
-| `baseURL` | AID-Service 服务地址，包含协议、IP、端口和路径前缀 | `http://127.0.0.1:8080/api/v1` |
+| `baseURL` | AID-Service 服务地址，包含协议、IP、端口和路径前缀 | `http://111.228.12.67:28090/api/v1` |
 | `api_token` | 认证密钥，须与服务端配置一致 | `11111111` |
 
 ### 4.2 常见配置场景
 
-**本机调试（默认）：**
+**生产服务器（默认）：**
 ```properties
-baseURL=http://127.0.0.1:8080/api/v1
+baseURL=http://111.228.12.67:28090/api/v1
 api_token=11111111
 ```
 
-**连接远程服务器：**
+**连接其他服务器：**
 ```properties
 baseURL=http://192.168.1.100:8080/api/v1
 api_token=your_production_api_key
@@ -184,54 +191,43 @@ mvn clean package -DskipTests
 
 ---
 
-## 6. 构建与运行
+## 6. CLI 命令使用
 
-### 6.1 构建 Fat JAR
+SDK 根目录的 `cli_start.bat`（Windows）/ `cli_start.sh`（Linux/macOS）封装了所有命令，无需手动拼写 JAR 路径。
 
+**查看帮助（不带参数运行）：**
 ```bash
-cd aid-client-sdk-java
-
-# 编译并打包（包含所有依赖）
-mvn clean package -DskipTests
+cli_start.bat
 ```
 
-构建成功后，在 `target/` 目录生成：
-- `aid-client-sdk-1.0.0.jar`（Fat JAR，可直接运行）
-
-### 6.2 运行示例程序
-
+**各命令示例（Windows）：**
 ```bash
-# Windows（使用完整 JDK 路径，避免注册表路径问题）
-"C:\Program Files\Java\jdk1.8.0_291\bin\java.exe" -jar target\aid-client-sdk-1.0.0.jar com.aid.sdk.examples.BasicUsage
+# 1. 创建任务
+cli_start.bat newTaskCreate --simulateType LaWan --taskName myTask001
 
-# Linux / macOS
-java -jar target/aid-client-sdk-1.0.0.jar com.aid.sdk.examples.BasicUsage
+# 2. 上传参数文件（多文件用逗号分隔）
+cli_start.bat uploadParamfiles --TaskID LaWan00000001 --files ./data/model.stp,./data/params.csv
+
+# 3. 校验文件
+cli_start.bat newTaskverify --TaskID LaWan00000001
+
+# 4. 启动任务
+cli_start.bat startTask --TaskID LaWan00000001
+
+# 5. 查询状态
+cli_start.bat queryTaskStatus --TaskID LaWan00000001
+
+# 6. 停止任务
+cli_start.bat stopTask --TaskID LaWan00000001
+
+# 7. 删除任务
+cli_start.bat deleteTask --TaskID LaWan00000001
+
+# 8. 获取任务结果
+cli_start.bat fetchTaskResult --TaskID LaWan00000001 --output ./result.zip
 ```
 
-### 6.3 使用 CLI 命令行工具
-
-```bash
-# 查看帮助
-java -jar target/aid-client-sdk-1.0.0.jar help
-
-# 创建任务
-java -jar target/aid-client-sdk-1.0.0.jar newTaskCreate --type LaWan --name my_task
-
-# 上传参数文件
-java -jar target/aid-client-sdk-1.0.0.jar uploadParamfiles --taskId <taskId> --files ./data/model.stp,./data/params.csv
-
-# 校验文件
-java -jar target/aid-client-sdk-1.0.0.jar newTaskVerify --taskId <taskId>
-
-# 启动任务
-java -jar target/aid-client-sdk-1.0.0.jar startTask --taskId <taskId>
-
-# 查询状态
-java -jar target/aid-client-sdk-1.0.0.jar queryTaskStatus --taskId <taskId>
-
-# 下载结果
-java -jar target/aid-client-sdk-1.0.0.jar fetchTaskResult --taskId <taskId> --output ./results/
-```
+> **提示**：若未设置 `JAVA_HOME`，脚本会自动使用 `java.exe`（需在系统 PATH 中）。
 
 ---
 
@@ -279,91 +275,4 @@ java -jar target/aid-client-sdk-1.0.0.jar fetchTaskResult --taskId <taskId> --ou
 
 ---
 
-## 8. 常见问题
 
-### Q1：`UnsupportedClassVersionError` 启动报错
-
-**错误信息**：
-```
-ch/qos/logback/classic/spi/LogbackServiceProvider has been compiled by a more recent version of the Java Runtime (class file version 55.0)
-```
-
-**原因**：`pom.xml` 中 Logback 版本过高（1.4.x 要求 Java 11+）。
-
-**解决**：确认 `pom.xml` 中版本为：
-```xml
-<logback.version>1.2.13</logback.version>
-<slf4j.version>1.7.36</slf4j.version>
-<logstash.version>6.6</logstash.version>
-```
-
----
-
-### Q2：`NoSuchMethodError: ILoggingEvent.getInstant()`
-
-**原因**：logstash-logback-encoder 7.x 不兼容 JDK 1.8。
-
-**解决**：确认 `pom.xml` 中：
-```xml
-<logstash.version>6.6</logstash.version>
-```
-
----
-
-### Q3：API 返回 401 认证失败
-
-**错误**：`API Key认证失败，无效的密钥`
-
-**原因**：`config.properties` 中的 `api_token` 与服务端不一致。
-
-**解决**：检查并对齐：
-- SDK：`config/config.properties` → `api_token`
-- 服务端：`AID-service/app_config.yaml` → `auth.api_key`
-
----
-
-### Q4：API 返回 404 Not Found
-
-**原因**：`baseURL` 路径配置错误，使用了旧版 `/aid-service` 路径。
-
-**解决**：
-```properties
-# 正确
-baseURL=http://127.0.0.1:8080/api/v1
-
-# 错误（旧版）
-baseURL=http://127.0.0.1:8080/aid-service
-```
-
----
-
-### Q5：`ClassNotFoundException: com.aid.sdk.examples.BasicUsage`
-
-**原因**：`BasicUsage.java` 未放入正确的源码目录。
-
-**解决**：确认文件存在于：
-```
-src/main/java/com/aid/sdk/examples/BasicUsage.java
-```
-
----
-
-### Q6：Maven 下载依赖失败（C:\ 权限问题）
-
-**原因**：Maven 默认将本地仓库存储在 `C:\Users\<用户名>\.m2`，某些环境存在权限限制。
-
-**解决**：指定本地仓库到用户目录：
-```powershell
-mvn clean package -Dmaven.repo.local="$env:USERPROFILE\.m2\repository" -DskipTests
-```
-
----
-
-### Q7：修改 logback.xml 后日志级别不变
-
-**原因**：`logback.xml` 打包进了 JAR，修改文件后未重新构建。
-
-**解决**：
-```bash
-mvn clean package -DskipTests
-```
